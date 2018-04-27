@@ -8,7 +8,8 @@ environment:
   sdk: '>=1.23.0 <2.0.0'
 
 dependencies:
-  charts_common: 0.0.1
+  charts_common:
+    path: ../charts_common
   collection: ^1.14.5
   flutter:
     sdk: flutter
@@ -19,4 +20,4 @@ dev_dependencies:
   mockito:
   flutter_test:
     sdk: flutter
-  test: ^0.12.0
+  test: ^0.12.0 
