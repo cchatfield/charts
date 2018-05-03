@@ -25,6 +25,7 @@ import 'package:charts_common/common.dart' as common
         TextElement,
         TextDirection;
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'text_element.dart' show TextElement;
 import 'canvas/circle_sector_painter.dart' show CircleSectorPainter;
 import 'canvas/line_painter.dart' show LinePainter;
@@ -105,6 +106,9 @@ class ChartCanvas implements common.ChartCanvas {
     switch (pattern) {
       case common.FillPatternType.forwardHatch:
         _drawForwardHatchPattern(bounds, canvas, fill: fill);
+        break;
+      case common.FillPatternType.gradient:
+        _drawGradient(bounds, canvas, fill: fill);
         break;
 
       case common.FillPatternType.solid:
@@ -292,6 +296,43 @@ class ChartCanvas implements common.ChartCanvas {
           stroke: fill,
           strokeWidthPx: fillWidthPx);
     }
+  }
+
+  /// Draws a forward hatch pattern in the given bounds.
+  _drawGradient(
+    Rectangle<num> bounds,
+    Canvas canvas, {
+    common.Color fill,
+  }) {
+    fill ??= common.StyleFactory.style.black;
+    double stopToPercent = 2 < bounds.width ? 2 / bounds.width : 0.1;
+    double secondStop = 0.0 + stopToPercent;
+    double nextToLastStop = 1.0 - stopToPercent;
+    final ui.Gradient gradient = new ui.Gradient.linear(
+        new Offset(bounds.left, (bounds.top + bounds.height / 2)),
+        new Offset(
+            (bounds.left + bounds.width), (bounds.top + bounds.height / 2)),
+        [
+          new Color.fromARGB(fill.a, fill.r, fill.g, fill.b),
+          new Color.fromARGB(150, fill.r, fill.g, fill.b),
+          new Color.fromARGB(10, fill.r, fill.g, fill.b),
+          new Color.fromARGB(0, fill.r, fill.g, fill.b),
+          new Color.fromARGB(10, fill.r, fill.g, fill.b),
+          new Color.fromARGB(150, fill.r, fill.g, fill.b),
+          new Color.fromARGB(fill.a, fill.r, fill.g, fill.b)
+        ],
+        [
+          0.0,
+          secondStop,
+          secondStop + 0.001,
+          0.5,
+          nextToLastStop - 0.001,
+          nextToLastStop,
+          1.0
+        ]);
+
+    // Fill in the shape with a solid background color.
+    canvas.drawRect(_getRect(bounds), new ui.Paint()..shader = gradient);
   }
 
   @override

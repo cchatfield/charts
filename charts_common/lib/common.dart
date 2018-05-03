@@ -68,7 +68,7 @@ export 'src/chart/layout/layout_view.dart'
     show LayoutPosition, ViewMargin, ViewMeasuredSizes;
 export 'src/chart/line/line_chart.dart' show LineChart;
 export 'src/chart/line/line_renderer.dart' show LineRenderer;
-export 'src/chart/line/line_renderer_config.dart' show LineRendererConfig;
+export 'src/chart/line/line_renderer_config.dart' show LineRendererConfig, LineInterpolation;
 export 'src/chart/pie/arc_renderer.dart' show ArcRenderer;
 export 'src/chart/pie/arc_renderer_config.dart' show ArcRendererConfig;
 export 'src/chart/pie/pie_chart.dart' show PieChart;

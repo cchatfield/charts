@@ -23,6 +23,7 @@ import 'line_renderer.dart' show LineRenderer;
 class LineRendererConfig<T, D> extends LayoutViewConfig
     implements SeriesRendererConfig<T, D> {
   final String customRendererId;
+  final LineInterpolation lineInterpolation;
 
   final SymbolRenderer symbolRenderer;
 
@@ -34,14 +35,22 @@ class LineRendererConfig<T, D> extends LayoutViewConfig
   /// Dash pattern for the line.
   final List<int> dashPattern;
 
-  LineRendererConfig(
-      {this.customRendererId,
-      this.strokeWidthPx = 2.0,
-      this.dashPattern,
-      this.symbolRenderer});
+  LineRendererConfig({
+    this.customRendererId,
+    this.strokeWidthPx = 2.0,
+    this.dashPattern,
+    this.symbolRenderer,
+    this.lineInterpolation = LineInterpolation.none,
+  });
 
   @override
   LineRenderer<T, D> build() {
     return new LineRenderer<T, D>(config: this, rendererId: customRendererId);
   }
+}
+
+enum LineInterpolation {
+  none,
+  cardinal,
+  monotone,
 }

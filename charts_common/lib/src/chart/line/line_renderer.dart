@@ -14,7 +14,8 @@
 // limitations under the License.
 
 import 'dart:collection' show LinkedHashMap;
-import 'dart:math' show Point;
+import 'dart:math' show Point, max, pow;
+import 'dart:ui';
 
 import 'package:meta/meta.dart' show required;
 
@@ -26,7 +27,7 @@ import '../common/datum_details.dart' show DatumDetails;
 import '../common/processed_series.dart' show ImmutableSeries, MutableSeries;
 import '../../common/color.dart' show Color;
 import '../../data/series.dart' show AttributeKey;
-import 'line_renderer_config.dart' show LineRendererConfig;
+import 'line_renderer_config.dart' show LineInterpolation, LineRendererConfig;
 
 const lineElementsKey =
     const AttributeKey<List<_LineRendererElement>>('LineRenderer.elements');
@@ -200,13 +201,88 @@ class LineRenderer<T, D> extends BaseCartesianRenderer<T, D> {
               (_AnimatedLine<T, D> animatingLine) =>
                   animatingLine.getCurrentLine(animationPercent))
           .forEach((_LineRendererElement line) {
+        List points;
+        switch (config.lineInterpolation) {
+          case LineInterpolation.none:
+            points = line.points;
+            break;
+          case LineInterpolation.cardinal:
+            points = _getCardinalSpline(line.points);
+            break;
+          case LineInterpolation.monotone:
+            points = _getMonotone(line.points);
+            break;
+        }
         canvas.drawLine(
             dashPattern: line.dashPattern,
-            points: line.points,
+            points: points,
             stroke: line.color,
             strokeWidthPx: line.strokeWidthPx);
       });
     });
+  }
+
+  List<_DatumPoint> _getCardinalSpline(List<_DatumPoint> points) {
+    final double tension = 0.5;
+    final int segmentCount = 10;
+    final result = <_DatumPoint>[];
+    final pts = new List<_DatumPoint>.from(points);
+
+    pts.insert(0, points[0]);
+    pts.add(points[points.length - 1]);
+
+    for (var i = 1; i < pts.length - 2; i++) {
+      var t1 =
+          new Offset(pts[i + 1].x - pts[i - 1].x, pts[i + 1].y - pts[i - 1].y);
+
+      var t2 = new Offset(pts[i + 2].x - pts[i].x, pts[i + 2].y - pts[i].y);
+
+      t1 *= tension;
+      t2 *= tension;
+
+      for (var t = 0; t <= segmentCount; t++) {
+        // steps
+        final step = t / segmentCount;
+
+        // cardinals
+        final c1 = (2 * pow(step, 3) - 3 * pow(step, 2) + 1).toDouble();
+        final c2 = (-(2 * pow(step, 3)) + 3 * pow(step, 2)).toDouble();
+        final c3 = (pow(step, 3) - 2 * pow(step, 2) + step).toDouble();
+        final c4 = (pow(step, 3) - pow(step, 2)).toDouble();
+
+        // calc x and y cords with common control vectors
+        final x = c1 * pts[i].x + c2 * pts[i + 1].x + c3 * t1.dx + c4 * t2.dx;
+        final y = c1 * pts[i].y + c2 * pts[i + 1].y + c3 * t1.dy + c4 * t2.dy;
+
+        //store points in array
+        result.add(new _DatumPoint(x: x, y: y));
+      }
+    }
+    return result;
+  }
+
+  List<_DatumPoint> _getMonotone(List<_DatumPoint> points) {
+    int stepsPer = 20;
+    if (points.length <= 1) return new List.from(points);
+
+    final interpolator = new MonotoneInterpolator.fromPoints(points);
+    final count = points.length * stepsPer;
+
+    final firstX = points.first.x;
+    final lastX = points.last.x;
+
+    final step = (lastX - firstX) / count;
+
+    final result = <_DatumPoint>[];
+    for (var x = firstX; x <= lastX; x += step) {
+      result.add(new _DatumPoint(x: x, y: interpolator.interpolate(x)));
+    }
+
+    // make sure we add the last point, just in case we didn't quite get to
+    // it when incrementing by "step" above
+    result.add(points.last);
+
+    return result;
   }
 
   _DatumPoint<T, D> _getPoint(
@@ -427,5 +503,98 @@ class _AnimatedLine<T, D> {
         _previousLine, _targetLine, animationPercent);
 
     return _currentLine;
+  }
+}
+
+class MonotoneInterpolator {
+  const MonotoneInterpolator._(this.points, this._c1s, this._c2s, this._c3s);
+
+  final List<_DatumPoint> points;
+  final List<double> _c1s;
+  final List<double> _c2s;
+  final List<double> _c3s;
+
+  factory MonotoneInterpolator.fromPoints(List<_DatumPoint> points) {
+    assert(points.isNotEmpty);
+
+    final n = points.length;
+
+    final dxs = <double>[];
+    final dys = <double>[];
+    final ms = <double>[];
+
+    // calculate differences and slopes
+    for (var i = 0; i < n - 1; i++) {
+      final dx = points[i + 1].x - points[i].x;
+      final dy = points[i + 1].y - points[i].y;
+      dxs.add(dx);
+      dys.add(dy);
+      ms.add(dy / dx);
+    }
+
+    // degrees 1, 2, and 3 coefficients
+    final c1s = <double>[ms[0]];
+    final c2s = <double>[];
+    final c3s = <double>[];
+
+    // calculate degree 1 coefficients
+    for (var i = 0; i < dxs.length - 1; i++) {
+      var m = ms[i];
+      var mNext = ms[i + 1];
+      if (m * mNext <= 0) {
+        c1s.add(0.0);
+      } else {
+        var dx = dxs[i];
+        var dxNext = dxs[i + 1];
+        var common = dx + dxNext;
+        c1s.add(3 * common / ((common + dxNext) / m + (common + dx) / mNext));
+      }
+    }
+    c1s.add(ms[ms.length - 1]);
+
+    // calculate degrees 2 and 3 coefficients
+    for (var i = 0; i < c1s.length - 1; i++) {
+      var c1 = c1s[i];
+      var m = ms[i];
+      var invDx = 1 / dxs[i];
+      var common_ = c1 + c1s[i + 1] - m - m;
+      c2s.add((m - c1 - common_) * invDx);
+      c3s.add(common_ * invDx * invDx);
+    }
+
+    return new MonotoneInterpolator._(points, c1s, c2s, c3s);
+  }
+
+  double interpolate(double x) {
+    // The rightmost point in the dataset should give an exact result
+    var i = points.length - 1;
+    if (x == points[i].x) {
+      return points[i].y;
+    }
+
+    // Search for the interval x is in, returning the corresponding y if x is one of the original xs
+    var low = 0;
+    int mid;
+    int high = _c3s.length - 1;
+
+    while (low <= high) {
+      mid = (0.5 * (low + high)).floor();
+      var xHere = points[mid].x;
+      if (xHere < x) {
+        low = mid + 1;
+      } else if (xHere > x) {
+        high = mid - 1;
+      } else {
+        return points[mid].y;
+      }
+    }
+    i = max(0, high);
+
+    // Interpolate
+    var diff = x - points[i].x, diffSq = diff * diff;
+    return points[i].y +
+        _c1s[i] * diff +
+        _c2s[i] * diffSq +
+        _c3s[i] * diff * diffSq;
   }
 }

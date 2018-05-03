@@ -17,9 +17,12 @@ import 'dart:collection' show LinkedHashMap;
 import 'dart:math' show Point, Rectangle;
 import 'package:meta/meta.dart';
 
+import '../../../common/text_element.dart';
+import '../../../common/text_style.dart';
 import '../../cartesian/axis/axis.dart' show ImmutableAxis;
+import '../../cartesian/axis/spec/axis_spec.dart';
 import '../base_chart.dart' show BaseChart, LifecycleListener;
-import '../chart_canvas.dart' show ChartCanvas, getAnimatedColor;
+import '../chart_canvas.dart' show ChartCanvas, FillPatternType, getAnimatedColor;
 import '../processed_series.dart' show MutableSeries;
 import 'chart_behavior.dart' show ChartBehavior;
 import '../../cartesian/cartesian_chart.dart' show CartesianChart;
@@ -144,6 +147,9 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
 
       final color = annotation.color ?? defaultColor;
 
+      final label = annotation.label ?? '';
+      final labelStyleSpec = annotation.labelStyleSpec ?? '';
+
       final annotationDatum = _getAnnotationDatum(annotation.startValue,
           annotation.endValue, axis, annotation.axisType);
 
@@ -156,7 +162,9 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
         animatingAnnotation = new _AnimatedAnnotation<T, D>(key: key)
           ..setNewTarget(new _AnnotationElement<T, D>()
             ..annotation = annotationDatum
-            ..color = color);
+            ..color = color
+            ..label = label
+            ..labelStyleSpec = labelStyleSpec);
 
         _annotationMap[key] = animatingAnnotation;
       }
@@ -167,7 +175,9 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
       // Get the annotation element we are going to setup.
       final annotationElement = new _AnnotationElement<T, D>()
         ..annotation = annotationDatum
-        ..color = color;
+        ..color = color
+        ..label = label
+        ..labelStyleSpec = labelStyleSpec;
 
       animatingAnnotation.setNewTarget(annotationElement);
     });
@@ -263,20 +273,43 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
       keysToRemove.forEach((String key) => _annotationMap.remove(key));
     }
 
+    num calculatedHeight = _drawAreaBounds.height / _annotationMap.length;
+    int startIndex = 0;
+
     _annotationMap.forEach((String key, _AnimatedAnnotation<T, D> annotation) {
       final annotationElement =
           annotation.getCurrentAnnotation(animationPercent);
-
+      final num padding = 5.0;
       switch (annotationElement.annotation.axisType) {
         case RangeAnnotationAxisType.domain:
           canvas.drawRect(
               new Rectangle<num>(
                   annotationElement.annotation.startPosition,
-                  _drawAreaBounds.top,
+                  _drawAreaBounds.top + (calculatedHeight * startIndex) + padding,
                   annotationElement.annotation.endPosition -
                       annotationElement.annotation.startPosition,
-                  _drawAreaBounds.height),
-              fill: annotationElement.color);
+                  calculatedHeight - (padding * 2)),
+              fill: annotationElement.color,
+              pattern: FillPatternType.gradient);
+          if (annotationElement.label != '' &&
+              annotationElement.labelStyleSpec != null) {
+            TextElement textElement =
+                graphicsFactory.createTextElement(annotationElement.label);
+            final labelStyle = _getTextStyle(
+                graphicsFactory, annotationElement.labelStyleSpec);
+            textElement.textStyle = labelStyle;
+            textElement.maxWidth = (annotationElement.annotation.endPosition -
+                    annotationElement.annotation.startPosition)
+                .toInt() < 100 ? 100 : (annotationElement.annotation.endPosition -
+                    annotationElement.annotation.startPosition)
+                .toInt();
+            textElement.textDirection = TextDirection.ltr;
+            canvas.drawText(
+                textElement,
+                annotationElement.annotation.startPosition.toInt() + 5,
+                (_drawAreaBounds.top + (calculatedHeight * startIndex + (calculatedHeight / 2) - (labelStyle.fontSize / 3)))
+                    .toInt());
+          }
           break;
 
         case RangeAnnotationAxisType.measure:
@@ -290,7 +323,17 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
               fill: annotationElement.color);
           break;
       }
+      startIndex++;
     });
+  }
+
+  // Helper function that converts [TextStyleSpec] to [TextStyle].
+  TextStyle _getTextStyle(
+      GraphicsFactory graphicsFactory, TextStyleSpec labelSpec) {
+    return graphicsFactory.createTextPaint()
+      ..color = labelSpec?.color ?? Color.black
+      ..fontFamily = labelSpec?.fontFamily
+      ..fontSize = labelSpec?.fontSize ?? 12;
   }
 
   @override
@@ -317,6 +360,7 @@ class _AnnotationElement<T, D> {
   _DatumAnnotation<T, D> annotation;
   Color color;
   String label;
+  TextStyleSpec labelStyleSpec;
   Point<double> labelPosition;
 
   _AnnotationElement<T, D> clone() {
@@ -324,7 +368,8 @@ class _AnnotationElement<T, D> {
       ..annotation = new _DatumAnnotation.from(annotation)
       ..color = color != null ? new Color.fromOther(color: color) : null
       ..label = this.label
-      ..labelPosition = labelPosition;
+      ..labelPosition = labelPosition
+      ..labelStyleSpec = labelStyleSpec;
   }
 
   void updateAnimationPercent(_AnnotationElement previous,
@@ -430,9 +475,14 @@ class RangeAnnotationSegment<T, D> {
   final Color color;
   final String label;
   final AnnotationLabelDirection labelDirection;
+  final TextStyleSpec labelStyleSpec;
 
   RangeAnnotationSegment(this.startValue, this.endValue, this.axisType,
-      {this.axisId, this.color, this.label, this.labelDirection});
+      {this.axisId,
+      this.color,
+      this.label,
+      this.labelDirection,
+      this.labelStyleSpec});
 }
 
 enum RangeAnnotationAxisType {
