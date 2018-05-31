@@ -1,3 +1,4 @@
+import 'package:charts_common/src/chart/common/behavior/range_annotation.dart';
 // Copyright 2018 the Charts project authors. Please see the AUTHORS file
 // for details.
 //
@@ -33,6 +34,7 @@ class SelectionModel<T, D> {
   final _listeners = <SelectionModelListener<T, D>>[];
   var _selectedDatum = <SeriesDatum<T, D>>[];
   var _selectedSeries = <ImmutableSeries<T, D>>[];
+  AnnotationDatumDetail _selectedAnnotationObject;
 
   /// When set to true, prevents the model from being updated.
   bool locked = false;
@@ -40,7 +42,8 @@ class SelectionModel<T, D> {
   /// Updates the selection state. If mouse driven, [datumSelection] should be
   /// ordered by distance from mouse, closest first.
   bool updateSelection(List<SeriesDatum<T, D>> datumSelection,
-      List<ImmutableSeries<T, D>> seriesList) {
+      List<ImmutableSeries<T, D>> seriesList,
+      {AnnotationDatumDetail annotationObject}) {
     if (locked) {
       return false;
     }
@@ -50,6 +53,7 @@ class SelectionModel<T, D> {
 
     _selectedDatum = datumSelection;
     _selectedSeries = seriesList;
+    _selectedAnnotationObject = annotationObject;
 
     final changed =
         !new ListEquality().equals(origSelectedDatum, _selectedDatum) ||
@@ -78,6 +82,9 @@ class SelectionModel<T, D> {
   ///
   /// This is empty by default.
   List<ImmutableSeries<T, D>> get selectedSeries => _selectedSeries;
+
+  AnnotationDatumDetail get selectedAnnotationObject =>
+      _selectedAnnotationObject;
 
   /// Add a listener to be notified when this [SelectionModel] changes.
   ///

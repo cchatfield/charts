@@ -15,6 +15,7 @@
 
 import 'dart:math' show Rectangle, Point;
 
+import 'package:charts_common/src/chart/common/behavior/range_annotation.dart';
 import 'package:meta/meta.dart' show protected;
 
 import 'behavior/chart_behavior.dart' show ChartBehavior;
@@ -191,6 +192,28 @@ abstract class BaseChart<T, D> {
     });
 
     return details;
+  }
+
+  AnnotationDatumDetail getNearestDatumDetailPerAnnotation(Point<double> drawAreaPoint) {
+    AnnotationDatumDetail annotationDetail;
+    RangeAnnotation annotation;
+    _behaviorStack.forEach((ChartBehavior behavior) {
+      if (behavior is RangeAnnotation) {
+        annotation = behavior;
+      }
+    });
+
+    if (annotation != null) {
+      annotation.AnnotationDatumDetails.forEach((detail) {
+        if (drawAreaPoint.x > detail.startPoint.x &&
+            drawAreaPoint.x < detail.endPoint.x &&
+            drawAreaPoint.y > detail.startPoint.y &&
+            drawAreaPoint.y < detail.endPoint.y) {
+          annotationDetail = detail;
+        }
+      });
+    }
+    return annotationDetail;
   }
 
   //

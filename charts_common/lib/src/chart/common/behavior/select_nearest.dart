@@ -125,6 +125,7 @@ class SelectNearest<T, D> implements ChartBehavior<T, D> {
     }
 
     var details = _chart.getNearestDatumDetailPerSeries(chartPoint);
+    var annotation = _chart.getNearestDatumDetailPerAnnotation(chartPoint);
 
     final seriesList = <ImmutableSeries<T, D>>[];
     final seriesDatumList = <SeriesDatum<T, D>>[];
@@ -143,7 +144,7 @@ class SelectNearest<T, D> implements ChartBehavior<T, D> {
 
     return _chart
         .getSelectionModel(selectionModelType)
-        .updateSelection(seriesDatumList, seriesList);
+        .updateSelection(seriesDatumList, seriesList, annotationObject: annotation);
   }
 
   bool _onDeselectAll(_, __, ___) {

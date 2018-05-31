@@ -22,7 +22,8 @@ import '../../../common/text_style.dart';
 import '../../cartesian/axis/axis.dart' show ImmutableAxis;
 import '../../cartesian/axis/spec/axis_spec.dart';
 import '../base_chart.dart' show BaseChart, LifecycleListener;
-import '../chart_canvas.dart' show ChartCanvas, FillPatternType, getAnimatedColor;
+import '../chart_canvas.dart'
+    show ChartCanvas, FillPatternType, getAnimatedColor;
 import '../processed_series.dart' show MutableSeries;
 import 'chart_behavior.dart' show ChartBehavior;
 import '../../cartesian/cartesian_chart.dart' show CartesianChart;
@@ -206,6 +207,28 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
 
   @override
   String get role => 'RangeAnnotation';
+
+  List<AnnotationDatumDetail> get AnnotationDatumDetails {
+    int index = 0;
+    List<AnnotationDatumDetail> details = [];
+    _annotationMap.forEach((String key, _AnimatedAnnotation<T, D> annotation) {
+      final annotationElement = annotation.getCurrentAnnotation(1.0);
+      details.add(new AnnotationDatumDetail(
+          annotationElement.annotation.startPoint,
+          annotationElement.annotation.endPoint,
+          annotations[index].tagAlongObject));
+      index++;
+    });
+    return details;
+  }
+}
+
+class AnnotationDatumDetail {
+  final Point startPoint;
+  final Point endPoint;
+  final dynamic tagAlongObject;
+
+  AnnotationDatumDetail(this.startPoint, this.endPoint, this.tagAlongObject);
 }
 
 class _RangeAnnotationLayoutView<T, D> extends LayoutView {
@@ -282,10 +305,19 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
       final num padding = 5.0;
       switch (annotationElement.annotation.axisType) {
         case RangeAnnotationAxisType.domain:
+          num startX = annotationElement.annotation.startPosition;
+          num startY =
+              _drawAreaBounds.top + (calculatedHeight * startIndex) + padding;
+          num endX = annotationElement.annotation.endPosition;
+          num endY = startY + calculatedHeight - (padding * 2);
+          annotationElement.annotation.startPoint = new Point(startX, startY);
+          annotationElement.annotation.endPoint = new Point(endX, endY);
           canvas.drawRect(
               new Rectangle<num>(
                   annotationElement.annotation.startPosition,
-                  _drawAreaBounds.top + (calculatedHeight * startIndex) + padding,
+                  _drawAreaBounds.top +
+                      (calculatedHeight * startIndex) +
+                      padding,
                   annotationElement.annotation.endPosition -
                       annotationElement.annotation.startPosition,
                   calculatedHeight - (padding * 2)),
@@ -299,15 +331,21 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
                 graphicsFactory, annotationElement.labelStyleSpec);
             textElement.textStyle = labelStyle;
             textElement.maxWidth = (annotationElement.annotation.endPosition -
-                    annotationElement.annotation.startPosition)
-                .toInt() < 100 ? 100 : (annotationElement.annotation.endPosition -
-                    annotationElement.annotation.startPosition)
-                .toInt();
+                            annotationElement.annotation.startPosition)
+                        .toInt() <
+                    100
+                ? 100
+                : (annotationElement.annotation.endPosition -
+                        annotationElement.annotation.startPosition)
+                    .toInt();
             textElement.textDirection = TextDirection.ltr;
             canvas.drawText(
                 textElement,
                 annotationElement.annotation.startPosition.toInt() + 5,
-                (_drawAreaBounds.top + (calculatedHeight * startIndex + (calculatedHeight / 2) - (labelStyle.fontSize / 3)))
+                (_drawAreaBounds.top +
+                        (calculatedHeight * startIndex +
+                            (calculatedHeight / 2) -
+                            (labelStyle.fontSize / 3)))
                     .toInt());
           }
           break;
@@ -343,9 +381,16 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
 class _DatumAnnotation<T, D> {
   final double startPosition;
   final double endPosition;
+  Point startPoint;
+  Point endPoint;
   final RangeAnnotationAxisType axisType;
 
-  _DatumAnnotation({this.startPosition, this.endPosition, this.axisType});
+  _DatumAnnotation(
+      {this.startPosition,
+      this.endPosition,
+      this.axisType,
+      this.endPoint,
+      this.startPoint});
 
   factory _DatumAnnotation.from(_DatumAnnotation<T, D> other,
       [double startPosition, double endPosition]) {
@@ -476,13 +521,15 @@ class RangeAnnotationSegment<T, D> {
   final String label;
   final AnnotationLabelDirection labelDirection;
   final TextStyleSpec labelStyleSpec;
+  final dynamic tagAlongObject;
 
   RangeAnnotationSegment(this.startValue, this.endValue, this.axisType,
       {this.axisId,
       this.color,
       this.label,
       this.labelDirection,
-      this.labelStyleSpec});
+      this.labelStyleSpec,
+      this.tagAlongObject});
 }
 
 enum RangeAnnotationAxisType {

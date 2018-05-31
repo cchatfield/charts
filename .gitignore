@@ -1,3 +1,8 @@
 .bundle
 _site
 
+charts_common/.dart_tool/*
+charts_flutter/example/build/*
+pubspec.lock
+.packages
+launch.json
