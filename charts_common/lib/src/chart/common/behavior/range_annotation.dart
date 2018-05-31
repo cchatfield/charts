@@ -211,7 +211,7 @@ class RangeAnnotation<D> implements ChartBehavior<D> {
   List<AnnotationDatumDetail> get AnnotationDatumDetails {
     int index = 0;
     List<AnnotationDatumDetail> details = [];
-    _annotationMap.forEach((String key, _AnimatedAnnotation<T, D> annotation) {
+    _annotationMap.forEach((String key, _AnimatedAnnotation<D> annotation) {
       final annotationElement = annotation.getCurrentAnnotation(1.0);
       details.add(new AnnotationDatumDetail(
           annotationElement.annotation.startPoint,
@@ -221,8 +221,8 @@ class RangeAnnotation<D> implements ChartBehavior<D> {
     });
     return details;
   }
-class _RangeAnnotationLayoutView<D> extends LayoutView {
 }
+
 
 class AnnotationDatumDetail {
   final Point startPoint;
@@ -232,7 +232,7 @@ class AnnotationDatumDetail {
   AnnotationDatumDetail(this.startPoint, this.endPoint, this.tagAlongObject);
 }
 
-class _RangeAnnotationLayoutView<T, D> extends LayoutView {
+class _RangeAnnotationLayoutView<D> extends LayoutView {
   final LayoutViewConfig layoutConfig;
 
   final Color defaultColor;

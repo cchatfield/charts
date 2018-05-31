@@ -43,7 +43,7 @@ class SelectionModel<D> {
   /// ordered by distance from mouse, closest first.
   bool updateSelection(
       List<SeriesDatum<D>> datumSelection, List<ImmutableSeries<D>> seriesList,
-      {bool notifyListeners = true}) {
+      {bool notifyListeners = true, AnnotationDatumDetail annotationObject}) {
     if (locked) {
       return false;
     }

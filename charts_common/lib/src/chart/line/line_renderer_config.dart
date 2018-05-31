@@ -65,7 +65,7 @@ class LineRendererConfig<D> extends LayoutViewConfig
   /// Configures the opacity of the area skirt on the chart.
   final double areaOpacity;
 
-  LineRendererConfig({
+  LineRendererConfig(
       {this.customRendererId,
       this.radiusPx = 3.5,
       this.stacked = false,
@@ -75,7 +75,8 @@ class LineRendererConfig<D> extends LayoutViewConfig
       this.includePoints = false,
       this.includeArea = false,
       this.areaOpacity = 0.1,
-      SymbolRenderer symbolRenderer})
+      SymbolRenderer symbolRenderer,
+      this.lineInterpolation = LineInterpolation.none})
       : this.strokeWidthPx = strokeWidthPx,
         this.symbolRenderer = symbolRenderer ?? new LineSymbolRenderer();
 

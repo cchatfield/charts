@@ -382,7 +382,7 @@ class LineRenderer<D> extends BaseCartesianRenderer<D> {
     return [lineElement, areaElement];
   }
 
-void paint(ChartCanvas canvas, double animationPercent) {
+  void paint(ChartCanvas canvas, double animationPercent) {
     // Clean up the lines that no longer exist.
     if (animationPercent == 1.0) {
       final keysToRemove = <String>[];
@@ -415,47 +415,21 @@ void paint(ChartCanvas canvas, double animationPercent) {
                   animatingElement.line?.getCurrentLine(animationPercent))
           .forEach((_LineRendererElement line) {
         if (line != null) {
-        List points;
-        switch (config.lineInterpolation) {
-          case LineInterpolation.none:
-            points = line.points;
-            break;
-          case LineInterpolation.cardinal:
-            points = _getCardinalSpline(line.points);
-            break;
-          case LineInterpolation.monotone:
-            points = _getMonotone(line.points);
-            break;
-        }
-        canvas.drawLine(
-            dashPattern: line.dashPattern,
-            points: points,
-            stroke: line.color,
-            strokeWidthPx: line.strokeWidthPx);
-        }
-      });
-    });
-
- _seriesLineMap.forEach((String key, List<_AnimatedElements<D>> elements) {
-      elements
-          .map<_AreaRendererElement<D>>(
-              (_AnimatedElements<D> animatingElement) =>
-                  animatingElement.area?.getCurrentArea(animationPercent))
-          .forEach((_AreaRendererElement area) {
-        if (area != null) {
-          canvas.drawPolygon(points: area.points, fill: area.color);
-        }
-      });
-
-      elements
-          .map<_LineRendererElement<D>>(
-              (_AnimatedElements<D> animatingElement) =>
-                  animatingElement.line?.getCurrentLine(animationPercent))
-          .forEach((_LineRendererElement line) {
-        if (line != null) {
+          List points;
+          switch (config.lineInterpolation) {
+            case LineInterpolation.none:
+              points = line.points;
+              break;
+            case LineInterpolation.cardinal:
+              points = _getCardinalSpline(line.points);
+              break;
+            case LineInterpolation.monotone:
+              points = _getMonotone(line.points);
+              break;
+          }
           canvas.drawLine(
               dashPattern: line.dashPattern,
-              points: line.points,
+              points: points,
               stroke: line.color,
               strokeWidthPx: line.strokeWidthPx);
         }
@@ -465,10 +439,9 @@ void paint(ChartCanvas canvas, double animationPercent) {
     if (config.includePoints) {
       _pointRenderer.paint(canvas, animationPercent);
     }
-
   }
 
- List<_DatumPoint> _getCardinalSpline(List<_DatumPoint> points) {
+  List<_DatumPoint> _getCardinalSpline(List<_DatumPoint> points) {
     final double tension = 0.5;
     final int segmentCount = 10;
     final result = <_DatumPoint>[];
@@ -982,4 +955,3 @@ class MonotoneInterpolator {
         _c3s[i] * diff * diffSq;
   }
 }
-
