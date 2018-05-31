@@ -41,7 +41,7 @@ import '../../../common/style/style_factory.dart' show StyleFactory;
 /// range.
 ///
 /// TODO: Support labels.
-class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
+class RangeAnnotation<D> implements ChartBehavior<D> {
   /// List of annotations to render on the chart.
   final List<RangeAnnotationSegment> annotations;
 
@@ -52,17 +52,17 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
   /// annotation start and end values.
   final bool extendAxis;
 
-  CartesianChart<T, D> _chart;
+  CartesianChart<D> _chart;
 
   _RangeAnnotationLayoutView _view;
 
-  LifecycleListener<T, D> _lifecycleListener;
+  LifecycleListener<D> _lifecycleListener;
 
   /// Store a map of data drawn on the chart, mapped by series name.
   ///
   /// [LinkedHashMap] is used to render the series on the canvas in the same
   /// order as the data was given to the chart.
-  final _annotationMap = new LinkedHashMap<String, _AnimatedAnnotation<T, D>>();
+  final _annotationMap = new LinkedHashMap<String, _AnimatedAnnotation<D>>();
 
   // Store a list of annotations that exist in the current annotation list.
   //
@@ -74,12 +74,12 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
   RangeAnnotation(this.annotations,
       {Color defaultColor, this.extendAxis = true})
       : defaultColor = StyleFactory.style.rangeAnnotationColor {
-    _lifecycleListener = new LifecycleListener<T, D>(
+    _lifecycleListener = new LifecycleListener<D>(
         onPostprocess: _updateAxisRange, onAxisConfigured: _updateViewData);
   }
 
   @override
-  void attachTo(BaseChart<T, D> chart) {
+  void attachTo(BaseChart<D> chart) {
     if (!(chart is CartesianChart)) {
       throw new ArgumentError(
           'RangeAnnotation can only be attached to a CartesianChart');
@@ -87,7 +87,7 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
 
     _chart = chart;
 
-    _view = new _RangeAnnotationLayoutView<T, D>(
+    _view = new _RangeAnnotationLayoutView<D>(
         layoutPositionOrder: -1, defaultColor: defaultColor);
 
     chart.addView(_view);
@@ -101,7 +101,7 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
     chart.removeLifecycleListener(_lifecycleListener);
   }
 
-  void _updateAxisRange(List<MutableSeries<T, D>> seriesList) {
+  void _updateAxisRange(List<MutableSeries<D>> seriesList) {
     // Extend the axis range if enabled.
     if (extendAxis) {
       final domainAxis = _chart.domainAxis;
@@ -155,13 +155,13 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
           annotation.endValue, axis, annotation.axisType);
 
       // If we already have a animatingAnnotation for that index, use it.
-      _AnimatedAnnotation<T, D> animatingAnnotation;
+      _AnimatedAnnotation<D> animatingAnnotation;
       if (_annotationMap.containsKey(key)) {
         animatingAnnotation = _annotationMap[key];
       } else {
         // Create a new annotation, positioned at the start and end values.
-        animatingAnnotation = new _AnimatedAnnotation<T, D>(key: key)
-          ..setNewTarget(new _AnnotationElement<T, D>()
+        animatingAnnotation = new _AnimatedAnnotation<D>(key: key)
+          ..setNewTarget(new _AnnotationElement<D>()
             ..annotation = annotationDatum
             ..color = color
             ..label = label
@@ -174,7 +174,7 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
       _currentKeys.add(key);
 
       // Get the annotation element we are going to setup.
-      final annotationElement = new _AnnotationElement<T, D>()
+      final annotationElement = new _AnnotationElement<D>()
         ..annotation = annotationDatum
         ..color = color
         ..label = label
@@ -184,7 +184,7 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
     });
 
     // Animate out annotations that don't exist anymore.
-    _annotationMap.forEach((String key, _AnimatedAnnotation<T, D> annotation) {
+    _annotationMap.forEach((String key, _AnimatedAnnotation<D> annotation) {
       if (_currentKeys.contains(annotation.key) != true) {
         annotation.animateOut();
       }
@@ -194,12 +194,12 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
   }
 
   /// Generates a datum that describes an annotation.
-  _DatumAnnotation<T, D> _getAnnotationDatum(D startValue, D endValue,
+  _DatumAnnotation<D> _getAnnotationDatum(D startValue, D endValue,
       ImmutableAxis<D> axis, RangeAnnotationAxisType axisType) {
     final startPosition = axis.getLocation(startValue);
     final endPosition = axis.getLocation(endValue);
 
-    return new _DatumAnnotation<T, D>(
+    return new _DatumAnnotation<D>(
         startPosition: startPosition,
         endPosition: endPosition,
         axisType: axisType);
@@ -221,6 +221,7 @@ class RangeAnnotation<T, D> implements ChartBehavior<T, D> {
     });
     return details;
   }
+class _RangeAnnotationLayoutView<D> extends LayoutView {
 }
 
 class AnnotationDatumDetail {
@@ -245,7 +246,7 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
   ///
   /// [LinkedHashMap] is used to render the series on the canvas in the same
   /// order as the data was given to the chart.
-  LinkedHashMap<String, _AnimatedAnnotation<T, D>> _annotationMap;
+  LinkedHashMap<String, _AnimatedAnnotation<D>> _annotationMap;
 
   _RangeAnnotationLayoutView({
     @required int layoutPositionOrder,
@@ -254,7 +255,7 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
             position: LayoutPosition.DrawArea,
             positionOrder: layoutPositionOrder);
 
-  set annotationMap(LinkedHashMap<String, _AnimatedAnnotation<T, D>> value) {
+  set annotationMap(LinkedHashMap<String, _AnimatedAnnotation<D>> value) {
     _annotationMap = value;
   }
 
@@ -286,8 +287,7 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
     if (animationPercent == 1.0) {
       final keysToRemove = <String>[];
 
-      _annotationMap
-          .forEach((String key, _AnimatedAnnotation<T, D> annotation) {
+      _annotationMap.forEach((String key, _AnimatedAnnotation<D> annotation) {
         if (annotation.animatingOut) {
           keysToRemove.add(key);
         }
@@ -299,7 +299,7 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
     num calculatedHeight = _drawAreaBounds.height / _annotationMap.length;
     int startIndex = 0;
 
-    _annotationMap.forEach((String key, _AnimatedAnnotation<T, D> annotation) {
+    _annotationMap.forEach((String key, _AnimatedAnnotation<D> annotation) {
       final annotationElement =
           annotation.getCurrentAnnotation(animationPercent);
       final num padding = 5.0;
@@ -378,7 +378,7 @@ class _RangeAnnotationLayoutView<T, D> extends LayoutView {
   Rectangle<int> get componentBounds => this._drawAreaBounds;
 }
 
-class _DatumAnnotation<T, D> {
+class _DatumAnnotation<D> {
   final double startPosition;
   final double endPosition;
   Point startPoint;
@@ -392,24 +392,24 @@ class _DatumAnnotation<T, D> {
       this.endPoint,
       this.startPoint});
 
-  factory _DatumAnnotation.from(_DatumAnnotation<T, D> other,
+  factory _DatumAnnotation.from(_DatumAnnotation<D> other,
       [double startPosition, double endPosition]) {
-    return new _DatumAnnotation<T, D>(
+    return new _DatumAnnotation<D>(
         startPosition: startPosition ?? other.startPosition,
         endPosition: endPosition ?? other.endPosition,
         axisType: other.axisType);
   }
 }
 
-class _AnnotationElement<T, D> {
-  _DatumAnnotation<T, D> annotation;
+class _AnnotationElement<D> {
+  _DatumAnnotation<D> annotation;
   Color color;
   String label;
   TextStyleSpec labelStyleSpec;
   Point<double> labelPosition;
 
-  _AnnotationElement<T, D> clone() {
-    return new _AnnotationElement<T, D>()
+  _AnnotationElement<D> clone() {
+    return new _AnnotationElement<D>()
       ..annotation = new _DatumAnnotation.from(annotation)
       ..color = color != null ? new Color.fromOther(color: color) : null
       ..label = this.label
@@ -432,19 +432,19 @@ class _AnnotationElement<T, D> {
                 animationPercent) +
             previousAnnotation.endPosition;
 
-    annotation = new _DatumAnnotation<T, D>.from(
+    annotation = new _DatumAnnotation<D>.from(
         targetAnnotation, startPosition, endPosition);
 
     color = getAnimatedColor(previous.color, target.color, animationPercent);
   }
 }
 
-class _AnimatedAnnotation<T, D> {
+class _AnimatedAnnotation<D> {
   final String key;
 
-  _AnnotationElement<T, D> _previousAnnotation;
-  _AnnotationElement<T, D> _targetAnnotation;
-  _AnnotationElement<T, D> _currentAnnotation;
+  _AnnotationElement<D> _previousAnnotation;
+  _AnnotationElement<D> _targetAnnotation;
+  _AnnotationElement<D> _currentAnnotation;
 
   // Flag indicating whether this annotation is being animated out of the chart.
   bool animatingOut = false;
@@ -463,14 +463,14 @@ class _AnimatedAnnotation<T, D> {
     animatingOut = true;
   }
 
-  void setNewTarget(_AnnotationElement<T, D> newTarget) {
+  void setNewTarget(_AnnotationElement<D> newTarget) {
     animatingOut = false;
     _currentAnnotation ??= newTarget.clone();
     _previousAnnotation = _currentAnnotation.clone();
     _targetAnnotation = newTarget;
   }
 
-  _AnnotationElement<T, D> getCurrentAnnotation(double animationPercent) {
+  _AnnotationElement<D> getCurrentAnnotation(double animationPercent) {
     if (animationPercent == 1.0 || _previousAnnotation == null) {
       _currentAnnotation = _targetAnnotation;
       _previousAnnotation = _targetAnnotation;
@@ -486,8 +486,8 @@ class _AnimatedAnnotation<T, D> {
 
 /// Helper class that exposes fewer private internal properties for unit tests.
 @visibleForTesting
-class RangeAnnotationTester<T, D> {
-  final RangeAnnotation<T, D> behavior;
+class RangeAnnotationTester<D> {
+  final RangeAnnotation<D> behavior;
 
   RangeAnnotationTester(this.behavior);
 
@@ -495,7 +495,7 @@ class RangeAnnotationTester<T, D> {
   bool doesAnnotationExist(num startPosition, num endPosition, Color color) {
     var exists = false;
 
-    behavior._annotationMap.forEach((String key, _AnimatedAnnotation<T, D> a) {
+    behavior._annotationMap.forEach((String key, _AnimatedAnnotation<D> a) {
       final currentAnnotation = a._currentAnnotation;
       final annotation = currentAnnotation.annotation;
 
@@ -512,7 +512,7 @@ class RangeAnnotationTester<T, D> {
 }
 
 /// Data for a chart annotation.
-class RangeAnnotationSegment<T, D> {
+class RangeAnnotationSegment<D> {
   final D startValue;
   final D endValue;
   final RangeAnnotationAxisType axisType;
